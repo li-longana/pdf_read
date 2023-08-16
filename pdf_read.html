@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title id="page-title">pdf read</title>
+</head>
+
+<body>
+  <div id="pdf-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.2.228/pdf.min.js"></script>
+
+  <script>
+    const pdfContainer = document.getElementById('pdf-container');
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+
+    // 从 URL 参数中获取标题和文件链接
+    const urlParams = new URLSearchParams(window.location.search);
+    const newTitle = urlParams.get('title');
+    const pdfUrl = urlParams.get('pdfUrl');
+
+    document.getElementById('page-title').textContent = newTitle; // 更新标题
+
+     if (pdfUrl) {
+      let loadingTask = pdfjsLib.getDocument(pdfUrl);
+
+      loadingTask.promise.then(pdf => {
+        let pagesCount = pdf.numPages;
+
+        function renderPage(pageNumber) {
+          pdf.getPage(pageNumber).then(page => {
+            let canvas = document.createElement('canvas');
+            canvas.style.width = '100%';
+            canvas.classList.add('pdf-page');
+            let viewport = page.getViewport({ scale: 1.5 }); // 调整缩放以提高清晰度
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            page.render({
+              canvasContext: canvas.getContext('2d'),
+              viewport: viewport,
+              renderInteractiveForms: true,
+              textLayer: pdfjsLib.renderTextLayer({
+                textContentStream: page.streamTextContent(),
+                container: canvas,
+                viewport: viewport,
+              }),
+              enhanceTextSelection: true,
+            }).then(() => {
+              pdfContainer.appendChild(canvas);
+
+              if (pageNumber < pagesCount) {
+                renderPage(pageNumber + 1); // 递归加载下一页
+              }
+            });
+          });
+        }
+
+        renderPage(1); // 开始加载第一页
+      });
+    } else {
+      pdfContainer.textContent = '未提供 PDF 文件链接   读取方式：?title=新的标题&pdfUrl=你的PDF文件链接';
+    }
+  </script>
+</body>
+</html>
